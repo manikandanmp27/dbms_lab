@@ -13,15 +13,14 @@ GROUP BY S.Salesman_id
 HAVING COUNT(*) > 1;
 
 -- Q3 List all the salesman and indicate those who have and don't have customers in their cities (Use UNION operation).
-SELECT S.Salesman_id, S.Name, S.City, 'Has Customer' Status
-FROM SALESMAN S JOIN CUSTOMER C USING (Salesman_id, City)
+SELECT Salesman_id, Name, City, 'Has Customer' AS Status
+FROM SALESMAN
+WHERE (Salesman_id, City) IN (SELECT Salesman_id, City FROM CUSTOMER)
 UNION
 SELECT Salesman_id, Name, City, 'No Customer'
-FROM SALESMAN S
-WHERE NOT EXISTS (
-  SELECT 1 FROM CUSTOMER C
-  WHERE C.Salesman_id = S.Salesman_id AND C.City = S.City
-);
+FROM SALESMAN
+WHERE (Salesman_id, City) NOT IN (SELECT Salesman_id, City FROM CUSTOMER);
+
 -- Q4 Create a view that finds the salesman who has the customer with the highest order of a day.
 CREATE VIEW Highest_Order_Salesman AS
 SELECT S.Salesman_id, S.Name, C.Cust_Name, O.Ord_No,
