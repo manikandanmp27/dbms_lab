@@ -23,13 +23,14 @@ WHERE (Salesman_id, City) NOT IN (SELECT Salesman_id, City FROM CUSTOMER);
 
 -- Q4 Create a view that finds the salesman who has the customer with the highest order of a day.
 CREATE VIEW Highest_Order_Salesman AS
-SELECT S.Salesman_id, S.Name, C.Cust_Name, O.Ord_No,
-       O.Purchase_Amt, O.Ord_Date
-FROM SALESMAN S JOIN ORDERS O USING (Salesman_id)
+SELECT S.Salesman_id, S.Name, C.Cust_Name, O.Ord_No, O.Purchase_Amt, O.Ord_Date
+FROM SALESMAN S 
+JOIN ORDERS O USING (Salesman_id)
 JOIN CUSTOMER C USING (Customer_id)
-WHERE O.Purchase_Amt = (
-  SELECT MAX(Purchase_Amt) FROM ORDERS
-  WHERE Ord_Date = O.Ord_Date
+WHERE (Ord_Date, Purchase_Amt) IN (
+  SELECT Ord_Date, MAX(Purchase_Amt) 
+  FROM ORDERS 
+  GROUP BY Ord_Date
 );
 
 SELECT * FROM Highest_Order_Salesman;
