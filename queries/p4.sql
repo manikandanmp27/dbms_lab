@@ -18,7 +18,7 @@ ORDER BY Sem, Sec;
 CREATE VIEW Test1_USN_11XX1234 AS
 SELECT Subcode, Test1 FROM IA_MARKS
 WHERE USN = '11XX1234';
-
+SELECT * FROM Test1_USN_11XX1234;
 -- Q4: Calculate the FinalIA (average of best two test Marks) and update the corresponding table for all students.
 UPDATE IA_MARKS
 SET FinalIA = (Test1 + Test2 + Test3 - LEAST(Test1,Test2,Test3))/2;

@@ -1,0 +1,278 @@
+================================================================================
+                    DBMS LAB PROGRAMS CHEATSHEET (ALL 5 PROGRAMS)
+================================================================================
+
+--------------------------------------------------------------------------------
+PROGRAM 1: LIBRARY DATABASE
+--------------------------------------------------------------------------------
+SCHEMA:
+  BOOK(Book_id, Title, Pub_id, Pub_Year)
+  BOOK_AUTHORS(Book_id, Author_Name)
+  PUBLISHER(Pub_id, Name, Address, Phone)
+  BOOK_COPIES(Book_id, Branch_id, No_of_Copies)
+  BOOK_LENDING(Book_id, Branch_id, Card_No, Date_Out, Due_Date)
+  LIBRARY_BRANCH(Branch_id, Branch_Name, Address)
+
+QUERIES:
+Q1: Retrieve details of all books (id, title, publisher, authors, copies in branch):
+    SELECT B.Book_id, B.Title, P.Name AS Publisher,
+           BA.Author_Name, LB.Branch_Name, BC.No_of_Copies
+    FROM BOOK B
+    JOIN PUBLISHER P USING (Pub_id)
+    JOIN BOOK_AUTHORS BA USING (Book_id)
+    JOIN BOOK_COPIES BC USING (Book_id)
+    JOIN LIBRARY_BRANCH LB USING (Branch_id);
+    [Tip: Start from BOOK and join all 4 connected tables using USING]
+
+Q2: Borrowers who borrowed > 3 books between Jan 2019 and Jun 2019:
+    SELECT Card_No, COUNT(*) AS Total_Books_Borrowed
+    FROM BOOK_LENDING
+    WHERE Date_Out BETWEEN '2019-01-01' AND '2019-06-30'
+    GROUP BY Card_No
+    HAVING COUNT(*) > 3;
+    [Tip: BETWEEN is inclusive. Filter aggregated count with HAVING, not WHERE]
+
+Q3: Delete book 103 (demonstrating cascade):
+    DELETE FROM BOOK WHERE Book_id = 103;
+    [Tip: Child tables BOOK_AUTHORS, BOOK_COPIES, BOOK_LENDING auto-delete via ON DELETE CASCADE]
+
+Q4: Partition BOOK table by year of publication and demonstrate:
+    CREATE TABLE BOOK_PARTITIONED (
+        Book_id INT,
+        Title VARCHAR(100),
+        Pub_id INT,
+        Pub_Year INT,
+        PRIMARY KEY (Book_id, Pub_Year)
+    )
+    PARTITION BY RANGE (Pub_Year) (
+        PARTITION P1 VALUES LESS THAN (2019),
+        PARTITION P2 VALUES LESS THAN (2021),
+        PARTITION P3 VALUES LESS THAN (2023),
+        PARTITION P4 VALUES LESS THAN MAXVALUE
+    );
+
+    SELECT * FROM BOOK_PARTITIONED PARTITION (P1);
+    [Tip: In MySQL, the partition column Pub_Year MUST be part of the PRIMARY KEY!]
+
+Q5: View of all books and total copies available:
+    CREATE VIEW Available_Books AS
+    SELECT B.Book_id, B.Title, SUM(BC.No_of_Copies) Total_Copies
+    FROM BOOK B JOIN BOOK_COPIES BC USING (Book_id)
+    GROUP BY B.Book_id, B.Title;
+
+    SELECT * FROM Available_Books;
+
+
+--------------------------------------------------------------------------------
+PROGRAM 2: SALES ORDER DATABASE
+--------------------------------------------------------------------------------
+SCHEMA:
+  SALESMAN(Salesman_id, Name, City, Commission)
+  CUSTOMER(Customer_id, Cust_Name, City, Grade, Salesman_id)
+  ORDERS(Ord_No, Purchase_Amt, Ord_Date, Customer_id, Salesman_id)
+
+QUERIES:
+Q1: Customers with grades above Bangalore's average:
+    SELECT COUNT(*) AS Count_Above_Avg
+    FROM CUSTOMER
+    WHERE Grade > (SELECT AVG(Grade) FROM CUSTOMER WHERE City = 'Bangalore');
+    [Tip: Subquery computes the benchmark; outer query counts rows greater than it]
+
+Q2: Salesmen who have more than one customer:
+    SELECT S.Salesman_id, S.Name, COUNT(*) AS Customers
+    FROM SALESMAN S JOIN CUSTOMER C USING (Salesman_id)
+    GROUP BY S.Salesman_id
+    HAVING COUNT(*) > 1;
+
+Q3: Indicate salesmen who have and don't have customers in their city (UNION):
+    SELECT Salesman_id, Name, City, 'Has Customer' AS Status
+    FROM SALESMAN
+    WHERE (Salesman_id, City) IN (SELECT Salesman_id, City FROM CUSTOMER)
+    UNION
+    SELECT Salesman_id, Name, City, 'No Customer'
+    FROM SALESMAN
+    WHERE (Salesman_id, City) NOT IN (SELECT Salesman_id, City FROM CUSTOMER);
+    [Tip: Symmetric query! Write once with IN, write again with NOT IN, join with UNION]
+
+Q4: View of salesman who has customer with highest order of a day:
+    CREATE VIEW Highest_Order_Salesman AS
+    SELECT S.Salesman_id, S.Name, C.Cust_Name, O.Ord_No, O.Purchase_Amt, O.Ord_Date
+    FROM SALESMAN S 
+    JOIN ORDERS O USING (Salesman_id)
+    JOIN CUSTOMER C USING (Customer_id)
+    WHERE (Ord_Date, Purchase_Amt) IN (
+      SELECT Ord_Date, MAX(Purchase_Amt) 
+      FROM ORDERS 
+      GROUP BY Ord_Date
+    );
+
+    SELECT * FROM Highest_Order_Salesman;
+    [Tip: Uncorrelated tuple match (Ord_Date, Purchase_Amt) IN (SELECT date, MAX(amt)...)]
+
+Q5: Delete salesman 1000 and cascade orders:
+    DELETE FROM SALESMAN WHERE Salesman_id = 1000;
+    [Tip: ORDERS table has FOREIGN KEY ON DELETE CASCADE]
+
+
+--------------------------------------------------------------------------------
+PROGRAM 3: MOVIE DATABASE
+--------------------------------------------------------------------------------
+SCHEMA:
+  ACTOR(Act_id, Act_Name, Act_Gender)
+  DIRECTOR(Dir_id, Dir_Name, Dir_Phone)
+  MOVIES(Mov_id, Mov_Title, Mov_Year, Mov_Lang, Dir_id)
+  MOVIE_CAST(Act_id, Mov_id, Role)
+  RATING(Mov_id, Rev_Stars)
+
+QUERIES:
+Q1: Titles of all movies directed by 'ABCD':
+    SELECT Mov_Title FROM MOVIES M
+    JOIN DIRECTOR D USING (Dir_id)
+    WHERE Dir_Name = 'ABCD';
+
+Q2: Movie names where 1+ actors acted in 2+ movies:
+    SELECT DISTINCT Mov_Title FROM MOVIES
+    JOIN MOVIE_CAST USING (Mov_id)
+    WHERE Act_id IN (
+      SELECT Act_id FROM MOVIE_CAST
+      GROUP BY Act_id
+      HAVING COUNT(*) >= 2
+    );
+    [Tip: Subquery finds busy actors (>=2 movies); outer join pulls their movie titles]
+
+Q3: Actors who acted before 2000 AND after 2015 (use JOIN operation):
+    SELECT DISTINCT A.Act_Name
+    FROM ACTOR A
+    JOIN MOVIE_CAST C1 USING (Act_id)
+    JOIN MOVIES M1 USING (Mov_id)
+    JOIN MOVIE_CAST C2 USING (Act_id)
+    JOIN MOVIES M2 ON C2.Mov_id = M2.Mov_id
+    WHERE M1.Mov_Year < 2000
+      AND M2.Mov_Year > 2015;
+    [Tip: Self-join MOVIE_CAST and MOVIES twice for the two different year conditions]
+
+Q4: Highest rating per movie, sorted by title:
+    SELECT M.Mov_Title, MAX(R.Rev_Stars) AS Highest_Stars
+    FROM MOVIES M JOIN RATING R USING (Mov_id)
+    GROUP BY M.Mov_id, M.Mov_Title
+    ORDER BY M.Mov_Title;
+
+Q5: Update rating of movies directed by 'XYZ' to 5:
+    UPDATE RATING
+    JOIN MOVIES USING (Mov_id)
+    JOIN DIRECTOR USING (Dir_id)
+    SET Rev_Stars = 5
+    WHERE Dir_Name = 'XYZ';
+
+
+--------------------------------------------------------------------------------
+PROGRAM 4: COLLEGE DATABASE
+--------------------------------------------------------------------------------
+SCHEMA:
+  STUDENT(USN, SName, Address, Phone, Gender)
+  SEMSEC(SSID, Sem, Sec)
+  CLASS(USN, SSID)
+  SUBJECT(Subcode, Title, Sem, Credits)
+  IA_MARKS(USN, Subcode, SSID, Test1, Test2, Test3, FinalIA)
+
+QUERIES:
+Q1: Students in 4th Semester, Section 'C':
+    SELECT S.* FROM STUDENT S
+    JOIN CLASS C USING (USN)
+    JOIN SEMSEC SS USING (SSID)
+    WHERE Sem = 4 AND Sec = 'C';
+
+Q2: Total male and female students in each semester and section:
+    SELECT Sem, Sec, Gender, COUNT(*) AS Total
+    FROM STUDENT S
+    JOIN CLASS C USING (USN)
+    JOIN SEMSEC SS USING (SSID)
+    GROUP BY Sem, Sec, Gender
+    ORDER BY Sem, Sec;
+
+Q3: View of Test1 marks of student '11XX1234':
+    CREATE VIEW Test1_USN_11XX1234 AS
+    SELECT Subcode, Test1 FROM IA_MARKS
+    WHERE USN = '11XX1234';
+
+    SELECT * FROM Test1_USN_11XX1234;
+
+Q4: Compute FinalIA = average of best two tests (Golden Trick):
+    UPDATE IA_MARKS
+    SET FinalIA = (Test1 + Test2 + Test3 - LEAST(Test1, Test2, Test3)) / 2;
+
+    SELECT * FROM IA_MARKS;
+    [Tip: Sum of all 3 tests minus LEAST divided by 2]
+
+Q5: Categorize 8th Sem (A, B, C) students based on FinalIA:
+    SELECT USN, SName, Sem, Sec, FinalIA,
+    CASE
+      WHEN FinalIA >= 17 THEN 'Outstanding'
+      WHEN FinalIA >= 12 THEN 'Average'
+      ELSE 'Weak'
+    END AS Category
+    FROM STUDENT
+    JOIN CLASS USING (USN)
+    JOIN SEMSEC USING (SSID)
+    JOIN IA_MARKS USING (USN)
+    WHERE Sem = 8 AND Sec IN ('A', 'B', 'C');
+
+
+--------------------------------------------------------------------------------
+PROGRAM 5: COMPANY DATABASE
+--------------------------------------------------------------------------------
+SCHEMA:
+  EMPLOYEE(SSN, Name, Address, Sex, Salary, SuperSSN, DNo)
+  DEPARTMENT(DNo, DName, MgrSSN, MgrStartDate)
+  DLOCATION(DNo, DLoc)
+  PROJECT(PNo, PName, PLocation, DNo)
+  WORKS_ON(SSN, PNo, Hours)
+
+QUERIES:
+Q1: Projects involving employee 'Seo' (or 'Scott') as worker OR manager:
+    -- Worker
+    SELECT PNo FROM PROJECT 
+    JOIN WORKS_ON USING (PNo) 
+    JOIN EMPLOYEE USING (SSN) 
+    WHERE Name LIKE '%Seo'
+    UNION
+    -- Manager
+    SELECT PNo FROM PROJECT 
+    JOIN DEPARTMENT USING (DNo) 
+    JOIN EMPLOYEE ON MgrSSN = SSN 
+    WHERE Name LIKE '%Seo';
+    [Tip: UNION combines workers and managers without duplicates]
+
+Q2: 10% raise for IoT project employees:
+    SELECT E.SSN, E.Name, E.Salary, E.Salary * 1.10 AS NewSalary
+    FROM EMPLOYEE E
+    JOIN WORKS_ON W USING (SSN)
+    JOIN PROJECT P USING (PNo)
+    WHERE PName = 'IoT';
+
+Q3: Salary statistics for Accounts department:
+    SELECT SUM(Salary) AS TotalSalary, MAX(Salary) AS MaxSalary, 
+           MIN(Salary) AS MinSalary, AVG(Salary) AS AvgSalary
+    FROM EMPLOYEE
+    WHERE DNo = (SELECT DNo FROM DEPARTMENT WHERE DName = 'Accounts');
+
+Q4: Employees who work on ALL projects of Dept 2 (or 5) (NOT EXISTS):
+    SELECT E.Name FROM EMPLOYEE E
+    WHERE NOT EXISTS (
+      SELECT PNo FROM PROJECT
+      WHERE DNo = 2 AND NOT EXISTS (
+        SELECT 1 FROM WORKS_ON W
+        WHERE W.PNo = PROJECT.PNo AND W.SSN = E.SSN
+      )
+    );
+    [Tip: Relational division using Double NOT EXISTS: Outer=Employee, Mid=Project, Inner=Works_On]
+
+Q5: Departments with >5 employees earning >60,000:
+    SELECT DNo, DName, COUNT(*) AS EmployeesAbove60K
+    FROM DEPARTMENT 
+    JOIN EMPLOYEE USING (DNo)
+    WHERE Salary > 60000
+    GROUP BY DNo, DName
+    HAVING COUNT(*) > 5;
+================================================================================
+

@@ -1,0 +1,148 @@
+================================================================================
+            DBMS LAB EXAM VIVA QUESTIONS (PROGRAM-SPECIFIC)
+================================================================================
+
+--------------------------------------------------------------------------------
+PROGRAM 1: LIBRARY DATABASE - VIVA QUESTIONS
+--------------------------------------------------------------------------------
+Q1: What does ON DELETE CASCADE do in this schema?
+A1: When a row in the parent table (e.g. BOOK) is deleted, all dependent rows 
+    in child tables (BOOK_AUTHORS, BOOK_COPIES, BOOK_LENDING) that reference 
+    that Book_id are automatically deleted by the database engine.
+
+Q2: What happens if ON DELETE CASCADE is omitted and you try to delete a book?
+A2: The database throws a Foreign Key Constraint Violation error (MySQL Error 1451)
+    and blocks the deletion to preserve referential integrity.
+
+Q3: What is table partitioning? Why do we use it?
+A3: Partitioning splits a large table's data into smaller, manageable physical 
+    pieces (partitions) while retaining a single logical table. It drastically 
+    improves query performance (partition pruning) and maintenance.
+
+Q4: In MySQL, why must Pub_Year be part of PRIMARY KEY (Book_id, Pub_Year) in Q4?
+A4: MySQL engine requirement: Any column used in a PARTITION BY RANGE clause 
+    MUST be included in every unique key (including the primary key) of the table.
+
+Q5: Does BETWEEN in Q2 include boundary dates?
+A5: Yes. BETWEEN '2019-01-01' AND '2019-06-30' is inclusive, equivalent to:
+    Date_Out >= '2019-01-01' AND Date_Out <= '2019-06-30'.
+
+Q6: In Q5, why do we use SUM(No_of_Copies) and GROUP BY Book_id?
+A6: Because one book can exist across multiple branches with different copy counts.
+    SUM() aggregates the total copies across all branches for that book.
+
+
+--------------------------------------------------------------------------------
+PROGRAM 2: SALES ORDER DATABASE - VIVA QUESTIONS
+--------------------------------------------------------------------------------
+Q7: What is the difference between WHERE and HAVING?
+A7: 
+  - WHERE filters individual rows BEFORE any grouping or aggregation takes place.
+  - HAVING filters aggregated groups AFTER the GROUP BY operation has executed.
+
+Q8: What happens in Q1 if there are no customers in Bangalore?
+A8: The subquery SELECT AVG(Grade) returns NULL. Any comparison with NULL 
+    (Grade > NULL) evaluates to UNKNOWN, so the outer query returns COUNT = 0.
+
+Q9: What is the difference between UNION and UNION ALL?
+A9: 
+  - UNION combines results from two queries and REMOVES duplicate rows (slower).
+  - UNION ALL combines results and KEEPS all duplicate rows (faster).
+  - In Q3, UNION is required by the question to eliminate duplicate salesman entries.
+
+Q10: What are the requirements for two queries to be combined using UNION?
+A10:
+  1. Both queries must select the SAME NUMBER of columns.
+  2. Corresponding columns must have COMPATIBLE data types.
+  3. Column names in the final result are taken from the FIRST SELECT statement.
+
+Q11: What is a VIEW in SQL? Does it store data physically?
+A11: A VIEW is a virtual table defined by a stored SELECT query. It does NOT 
+     physically store data on disk; it dynamically runs its query and fetches 
+     fresh data from underlying base tables whenever queried.
+
+
+--------------------------------------------------------------------------------
+PROGRAM 3: MOVIE DATABASE - VIVA QUESTIONS
+--------------------------------------------------------------------------------
+Q12: In Q2, why can't we just write:
+     SELECT Mov_id FROM MOVIE_CAST GROUP BY Act_id HAVING COUNT(*) >= 2 ?
+A12: Two reasons:
+     1. In standard SQL (ONLY_FULL_GROUP_BY mode), selecting a non-aggregated 
+        column (Mov_id) not present in GROUP BY throws Error 1055.
+     2. Even if allowed, grouping by Act_id picks only ONE arbitrary movie for 
+        that actor, missing the other movies they acted in.
+
+Q13: Why did Q3 require a Self-Join (joining MOVIE_CAST and MOVIES twice)?
+A13: A single movie row cannot have a year that is simultaneously < 2000 AND > 2015.
+     To check that the SAME actor has two separate movies in different eras, we join 
+     two distinct instances of the movie tables (C1/M1 and C2/M2) tied by Act_id.
+
+Q14: In Q4, what does INNER JOIN ensure for ratings?
+A14: INNER JOIN automatically excludes movies that have zero ratings, satisfying 
+     the question constraint: "movies that have at least one rating".
+
+Q15: How does the multi-table UPDATE syntax work in Q5?
+A15: MySQL allows joining tables directly inside an UPDATE statement:
+     UPDATE RATING JOIN MOVIES USING (Mov_id) JOIN DIRECTOR USING (Dir_id)
+     SET Rev_Stars = 5 WHERE Dir_Name = 'XYZ';
+     The database joins the tables, identifies matching rows, and updates RATING.
+
+
+--------------------------------------------------------------------------------
+PROGRAM 4: COLLEGE DATABASE - VIVA QUESTIONS
+--------------------------------------------------------------------------------
+Q16: How does the formula in Q4 calculate the average of best two test marks?
+A16: Best 2 out of 3 = (Total of all 3 tests - Lowest test) / 2.
+     In MySQL: (Test1 + Test2 + Test3 - LEAST(Test1, Test2, Test3)) / 2.
+
+Q17: What is the difference between MIN() and LEAST() in SQL?
+A17:
+  - MIN() is an AGGREGATE function: finds the minimum value across multiple ROWS 
+    in a single column.
+  - LEAST() is a SCALAR function: compares multiple COLUMNS in the same row and 
+    returns the lowest value.
+
+Q18: What is CASE WHEN in SQL? Is it a statement or an expression?
+A18: CASE WHEN is a conditional EXPRESSION (like an if-else in programming) 
+     that evaluates conditions in order and returns a scalar value when the 
+     first TRUE condition is met.
+
+Q19: What is the purpose of the bridge table CLASS(USN, SSID)?
+A19: It represents the many-to-many relationship between Students and Sections, 
+     recording which class (semester & section) a student is enrolled in.
+
+
+--------------------------------------------------------------------------------
+PROGRAM 5: COMPANY DATABASE - VIVA QUESTIONS
+--------------------------------------------------------------------------------
+Q20: What is Relational Division? Which query demonstrates it?
+A20: Relational Division solves "FOR ALL" (universal quantification) questions.
+     Program 5, Q4 demonstrates it: "Find employees who work on ALL projects 
+     of department 2".
+
+Q21: How does the double NOT EXISTS query work in Program 5 Q4?
+A21: Read as a double negative:
+     "Find an employee E where there does NOT EXIST any project in Dept 2 
+      for which there does NOT EXIST a record in WORKS_ON with E's SSN."
+     If no un-worked project can be found for that employee, they work on all of them!
+
+Q22: In Q4, what does SELECT 1 mean inside NOT EXISTS?
+A22: EXISTS and NOT EXISTS only check for the EXISTENCE of matching rows (true/false).
+     They ignore selected column values, so SELECT 1 is standard, fast, and idiomatic.
+
+Q23: What does LIKE '%Seo' mean in Q1? What are SQL wildcards?
+A23: 
+  - % matches zero or more characters ('%Seo' matches any string ending in 'Seo').
+  - _ matches exactly one single character.
+
+Q24: In Q2, does E.Salary * 1.10 modify the table?
+A24: No. A SELECT statement only computes and projects values in the output display.
+     To permanently change data in the table, an UPDATE statement is required.
+
+Q25: In Q5, why might HAVING COUNT(*) > 5 return an Empty Set with sample data?
+A25: Because the inserted test data may not contain any department with more than 
+     5 employees earning above 60,000. It is syntactically and logically correct; 
+     the result simply reflects the small test dataset.
+================================================================================
+

@@ -1,0 +1,212 @@
+================================================================================
+                    DBMS CORE CONCEPTS & THEORY NOTES (VIVA READY)
+================================================================================
+
+--------------------------------------------------------------------------------
+1. ACID PROPERTIES OF TRANSACTIONS (SUPER IMPORTANT)
+--------------------------------------------------------------------------------
+A transaction is a logical unit of database processing that includes one or 
+more database access operations (read, insert, update, delete).
+
+  A - ATOMICITY ("All or Nothing"):
+      Either all operations of the transaction are completed successfully, or 
+      none are reflected in the database. If a failure occurs midway, the 
+      transaction is completely rolled back.
+      Example: In a bank transfer of Rs. 500 from Account A to Account B, if 
+      debiting A succeeds but crediting B fails, A's money is restored.
+
+  C - CONSISTENCY:
+      A transaction must take the database from one valid consistent state to 
+      another, preserving all integrity constraints (e.g. total money before 
+      and after transfer must remain equal).
+
+  I - ISOLATION:
+      Concurrent execution of transactions produces the same state as if they 
+      were executed serially one after another. Intermediate results of an 
+      uncommitted transaction are hidden from other concurrent transactions.
+
+  D - DURABILITY:
+      Once a transaction commits, its changes are permanently recorded in 
+      non-volatile memory (disk) and cannot be lost, even during a system crash.
+
+
+--------------------------------------------------------------------------------
+2. DATABASE KEYS IN RELATIONAL MODEL
+--------------------------------------------------------------------------------
+  1. SUPER KEY:
+     Any set of one or more attributes that uniquely identifies a row in a table.
+     Example: {SSN}, {SSN, Name}, {SSN, Address} are all Super Keys.
+
+  2. CANDIDATE KEY:
+     A minimal Super Key (a super key with no redundant attributes).
+     Example: {SSN} is a candidate key. {SSN, Name} is not minimal, so not candidate.
+
+  3. PRIMARY KEY:
+     The candidate key chosen by the database designer to uniquely identify 
+     tuples in a relation. It CANNOT accept NULL values.
+
+  4. ALTERNATE KEY (SECONDARY KEY):
+     Candidate keys that were NOT chosen as the primary key.
+
+  5. FOREIGN KEY:
+     An attribute in one relation that references the Primary Key of another 
+     relation, enforcing referential integrity.
+
+  6. COMPOSITE KEY:
+     A primary or candidate key composed of two or more attributes.
+     Example: MOVIE_CAST(Act_id, Mov_id) has composite PK (Act_id, Mov_id).
+
+
+--------------------------------------------------------------------------------
+3. INTEGRITY CONSTRAINTS
+--------------------------------------------------------------------------------
+  1. DOMAIN INTEGRITY:
+     Every value in a column must be valid according to the column's data type, 
+     format, and range (e.g. Grade INT between 0 and 100).
+
+  2. ENTITY INTEGRITY:
+     No primary key attribute can contain a NULL value. Every tuple must be 
+     uniquely identifiable.
+
+  3. REFERENTIAL INTEGRITY:
+     A foreign key value in a referencing table must either match a valid 
+     existing primary key value in the referenced table or be NULL.
+
+  4. KEY INTEGRITY / UNIQUE CONSTRAINT:
+     All values in a unique or primary key column must be distinct across all rows.
+
+
+--------------------------------------------------------------------------------
+4. NORMALIZATION (REMOVING ANOMALIES)
+--------------------------------------------------------------------------------
+Why Normalize? To reduce data redundancy and eliminate update, insertion, and 
+deletion anomalies.
+
+  ANOMALIES:
+  - Insertion Anomaly: Cannot insert an entity without adding unrelated data.
+  - Deletion Anomaly: Deleting one entity accidentally wipes out another entity.
+  - Update Anomaly: Inconsistent data when updating an attribute stored in multiple places.
+
+  NORMAL FORMS:
+  1. FIRST NORMAL FORM (1NF):
+     - Every column must contain ATOMIC (indivisible) values.
+     - No multi-valued attributes (arrays/lists) or repeating groups.
+     Example: Book authors stored in a separate table BOOK_AUTHORS instead of 
+     comma-separated strings in BOOK.
+
+  2. SECOND NORMAL FORM (2NF):
+     - Table must be in 1NF.
+     - NO PARTIAL DEPENDENCY: Every non-prime attribute must be fully functionally 
+       dependent on the whole primary key (applicable when PK is composite).
+
+  3. THIRD NORMAL FORM (3NF):
+     - Table must be in 2NF.
+     - NO TRANSITIVE DEPENDENCY: Non-prime attributes must not depend on other 
+       non-prime attributes (X -> Y where neither is a candidate key).
+       Rule of thumb: "Every non-key depends on the key, the whole key, and 
+       nothing but the key."
+
+  4. BOYCE-CODD NORMAL FORM (BCNF):
+     - Stricter version of 3NF.
+     - For every functional dependency X -> Y, X MUST be a Super Key.
+
+
+--------------------------------------------------------------------------------
+5. SQL SUBLANGUAGES (COMMAND TYPES)
+--------------------------------------------------------------------------------
+  1. DDL (Data Definition Language): Defines and modifies table structures.
+     - CREATE, ALTER, DROP, TRUNCATE, RENAME
+
+  2. DML (Data Manipulation Language): Modifies data inside tables.
+     - INSERT, UPDATE, DELETE
+
+  3. DQL (Data Query Language): Retrieves data from tables.
+     - SELECT
+
+  4. DCL (Data Control Language): Manages permissions and security.
+     - GRANT, REVOKE
+
+  5. TCL (Transaction Control Language): Manages transactions.
+     - COMMIT, ROLLBACK, SAVEPOINT
+
+
+--------------------------------------------------------------------------------
+6. DROP vs TRUNCATE vs DELETE (TOP EXAM QUESTION!)
+--------------------------------------------------------------------------------
+Feature           DELETE                   TRUNCATE                 DROP
+--------------------------------------------------------------------------------
+Command Type      DML                      DDL                      DDL
+Action            Deletes rows             Removes all rows         Destroys entire 
+                  matching a WHERE clause  and resets identity      table structure 
+                                                                    and its data
+WHERE clause?     Yes (optional)           No (deletes all)         No
+Speed             Slow (logs row by row)   Fast (deallocates pages) Fast
+Rollback?         Can be rolled back       Cannot be easily rolled  Cannot be rolled
+                  (in a transaction)       back in most databases   back
+Triggers?         Fires DELETE triggers    Does not fire triggers   Does not fire
+
+
+--------------------------------------------------------------------------------
+7. SQL JOINS CHEAT SHEET
+--------------------------------------------------------------------------------
+  - INNER JOIN: Returns only matching rows from both tables.
+  - LEFT (OUTER) JOIN: Returns all rows from left table, plus matched rows from 
+    right table (NULLs if no match).
+  - RIGHT (OUTER) JOIN: Returns all rows from right table, plus matched rows 
+    from left table.
+  - FULL (OUTER) JOIN: Returns all rows from both tables, filling NULLs where 
+    there is no match.
+  - CROSS JOIN (Cartesian Product): Pairs every row in table A with every row in 
+    table B (Size = N * M).
+  - NATURAL JOIN: Joins tables automatically on all columns with identical names.
+  - SELF JOIN: A table joined with itself (useful for hierarchies, e.g. Employee 
+    and Manager in EMPLOYEE table, or movies before 2000 and after 2015).
+
+
+--------------------------------------------------------------------------------
+8. VIEWS IN SQL
+--------------------------------------------------------------------------------
+  What is a View?
+  A virtual table based on the result-set of an SQL statement.
+  - Advantage 1: Security (restricts user access to specific columns/rows).
+  - Advantage 2: Simplicity (hides complex multi-table joins behind a simple table name).
+  - Advantage 3: Data Independence (underlying table structures can change without 
+    breaking legacy application queries).
+  
+  Updatable vs Read-Only Views:
+  A view is updatable only if it is based on a single base table without aggregate 
+  functions (SUM, COUNT, MAX), GROUP BY, DISTINCT, or UNION.
+
+
+--------------------------------------------------------------------------------
+9. INDEXES
+--------------------------------------------------------------------------------
+  What is an Index?
+  A data structure (usually a B-Tree or Hash) that speeds up data retrieval on 
+  a table at the cost of additional storage and slower writes (INSERT/UPDATE).
+
+  Types:
+  - Clustered Index: Determines the physical order of data rows on disk. Only ONE 
+    clustered index per table (typically the Primary Key).
+  - Non-Clustered Index: A separate lookup structure containing sorted keys pointing 
+    to the physical row location. A table can have multiple non-clustered indexes.
+
+
+--------------------------------------------------------------------------------
+10. CONCURRENCY PROBLEMS (WHEN TRANSACTIONS INTERLEAVE)
+--------------------------------------------------------------------------------
+  1. Dirty Read: Transaction T2 reads data written by uncommitted transaction T1. 
+     If T1 rolls back, T2 operated on invalid data.
+  2. Non-Repeatable Read: Transaction T1 reads a row, T2 updates/deletes that row 
+     and commits; when T1 reads the same row again, it sees different values.
+  3. Phantom Read: Transaction T1 queries a set of rows matching a condition; 
+     T2 inserts new rows matching that condition and commits; when T1 re-queries, 
+     it sees "phantom" new rows.
+
+  Transaction Isolation Levels:
+  - READ UNCOMMITTED: Allows Dirty, Non-repeatable, Phantom reads.
+  - READ COMMITTED: Prevents Dirty reads; allows Non-repeatable and Phantom reads.
+  - REPEATABLE READ (MySQL default): Prevents Dirty and Non-repeatable reads.
+  - SERIALIZABLE: Prevents all three anomalies (highest isolation, lowest concurrency).
+================================================================================
+
