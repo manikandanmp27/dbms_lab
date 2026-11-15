@@ -12,27 +12,28 @@ GROUP BY S.Salesman_id
 HAVING COUNT(*) > 1;
 
 --Q3
-SELECT S.Salesman_id, S.Name, S.City, 'Has Customer' Status
-FROM SALESMAN S JOIN CUSTOMER C USING (Salesman_id, City)
+SELECT Salesman_id, Name, City, 'Has Customer' AS Status
+FROM SALESMAN
+WHERE (Salesman_id, City) IN (SELECT Salesman_id, City FROM CUSTOMER)
 UNION
 SELECT Salesman_id, Name, City, 'No Customer'
-FROM SALESMAN S
-WHERE NOT EXISTS (
-  SELECT 1 FROM CUSTOMER C
-  WHERE C.Salesman_id = S.Salesman_id AND C.City = S.City
-);
+FROM SALESMAN
+WHERE (Salesman_id, City) NOT IN (SELECT Salesman_id, City FROM CUSTOMER);
+
 --Q4
 CREATE VIEW Highest_Order_Salesman AS
-SELECT S.Salesman_id, S.Name, C.Cust_Name, O.Ord_No,
-       O.Purchase_Amt, O.Ord_Date
-FROM SALESMAN S JOIN ORDERS O USING (Salesman_id)
+SELECT S.Salesman_id, S.Name, C.Cust_Name, O.Ord_No, O.Purchase_Amt, O.Ord_Date
+FROM SALESMAN S 
+JOIN ORDERS O USING (Salesman_id)
 JOIN CUSTOMER C USING (Customer_id)
-WHERE O.Purchase_Amt = (
-  SELECT MAX(Purchase_Amt) FROM ORDERS
-  WHERE Ord_Date = O.Ord_Date
+WHERE (Ord_Date, Purchase_Amt) IN (
+  SELECT Ord_Date, MAX(Purchase_Amt) 
+  FROM ORDERS 
+  GROUP BY Ord_Date
 );
 
 SELECT * FROM Highest_Order_Salesman;
+
 --Q5
 DELETE FROM SALESMAN WHERE Salesman_id = 1000;
 

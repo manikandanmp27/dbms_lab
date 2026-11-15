@@ -24,16 +24,16 @@ SET FinalIA = (Test1 + Test2 + Test3 - LEAST(Test1,Test2,Test3))/2;
 SELECT * FROM IA_MARKS;
 
 -- Query 5: Categorize 8th semester students
-SELECT S.USN, S.SName, Sem, Sec, FinalIA,
+SELECT USN, SName, Sem, Sec, FinalIA,
 CASE
   WHEN FinalIA >= 17 THEN 'Outstanding'
   WHEN FinalIA >= 12 THEN 'Average'
   ELSE 'Weak'
 END Category
-FROM STUDENT S
-JOIN CLASS C USING (USN)
-JOIN SEMSEC SS USING (SSID)
-JOIN IA_MARKS IA ON S.USN = IA.USN
+FROM STUDENT
+JOIN CLASS USING (USN)
+JOIN SEMSEC USING (SSID)
+JOIN IA_MARKS USING (USN)
 WHERE Sem = 8 AND Sec IN ('A','B','C');
 
 CREATE TABLE STUDENT (

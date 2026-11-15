@@ -17,7 +17,7 @@ SELECT
 FROM BOOK_LENDING
 WHERE Date_Out BETWEEN '2019-01-01' AND '2019-06-30'
 GROUP BY Card_No
-HAVING COUNT(*) > 8;
+HAVING COUNT(*) > 3;
 --Q3 Delete a book in BOOK table and update the contents of other tables to reflect this data manipulation operation.
 DELETE FROM BOOK
 WHERE Book_id = 103;
